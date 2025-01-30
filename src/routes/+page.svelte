@@ -37,14 +37,11 @@
 		vy: number;
 		color: string;
 		size: number;
-		rotation: number;
-		points: number;
 	}
 
 	let particles = $state<Particle[]>([]);
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
-	let animationFrameId: number;
 
 	const createParticle = (index: number): Particle => {
 		const isFast = index % 25 === 0;
@@ -55,27 +52,16 @@
 			vx: (Math.random() * 2 - 1) * (isFast ? 4 : 1),
 			vy: (Math.random() * 2 - 1) * (isFast ? 4 : 1),
 			color: `hsl(${Math.random() * 360}, 100%, 60%)`,
-			size: Math.random() * 3 + 5,
-			rotation: Math.random() * Math.PI * 2,
-			points: 4
+			size: Math.random() * 3 + 5
 		};
 	};
 
-	const drawStar = (particle: Particle) => {
-		const spikes = particle.points;
-		const outerRadius = particle.size;
-		const innerRadius = outerRadius * 0.4;
-
+	const drawParticle = (particle: Particle) => {
 		ctx.beginPath();
-		for (let i = 0; i < spikes * 2; i++) {
-			const radius = i % 2 === 0 ? outerRadius : innerRadius;
-			const angle = particle.rotation + (i * Math.PI) / spikes;
-			ctx.lineTo(particle.x + Math.cos(angle) * radius, particle.y + Math.sin(angle) * radius);
-		}
+		ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
 		ctx.closePath();
 
 		ctx.fillStyle = particle.color;
-		// ctx.shadowColor = particle.color;
 		ctx.shadowBlur = 15;
 		ctx.fill();
 	};
@@ -92,33 +78,39 @@
 		particles.forEach((particle) => {
 			particle.x += particle.vx;
 			particle.y += particle.vy;
-			particle.rotation += 0.02;
 
-			// Wrap around edges
-			if (particle.x < 0) particle.x = canvas.width;
-			if (particle.x > canvas.width) particle.x = 0;
-			if (particle.y < 0) particle.y = canvas.height;
-			if (particle.y > canvas.height) particle.y = 0;
+			if (particle.x <= 0) {
+				particle.vx *= -1;
+			}
 
-			drawStar(particle);
+			if (particle.x >= canvas.width) {
+				particle.vx *= -1;
+			}
+
+			if (particle.y <= 0) {
+				particle.vy *= -1;
+			}
+
+			if (particle.y >= canvas.height) {
+				particle.vy *= -1;
+			}
+
+			drawParticle(particle);
 		});
 
-		animationFrameId = requestAnimationFrame(animate);
+		requestAnimationFrame(animate);
 	};
 
 	onMount(() => {
-		particles = Array.from({ length: 100 }, (_, i) => createParticle(i));
+		const density = 100 / window.devicePixelRatio;
+		particles = Array.from({ length: density }, (_, i) => createParticle(i));
+
 		canvas.width = window.innerWidth;
 		canvas.height = window.innerHeight;
 		ctx = canvas.getContext('2d')!;
 
 		animate();
 		window.addEventListener('resize', handleResize);
-
-		return () => {
-			window.removeEventListener('resize', handleResize);
-			cancelAnimationFrame(animationFrameId);
-		};
 	});
 </script>
 
